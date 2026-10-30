@@ -15,7 +15,7 @@ npm run smoke
 npm run release
 ```
 
-该脚本验证仓库、主分支、干净状态和版本，创建附注 tag 并推送。GitHub Actions 在原生 macOS 和 Windows runner 上重新执行构建、核心测试和 Electron UI 测试，再生成：
+该脚本验证仓库、主分支、干净状态和版本，创建附注 tag 并推送。GitHub Actions 在原生 macOS 和 Windows runner 上重新执行构建、核心测试和 Electron UI 测试，再生成安装包，并再次启动打包后的应用验证：
 
 - `Nearlink-mac-arm64.dmg`
 - `Nearlink-mac-arm64.zip`
