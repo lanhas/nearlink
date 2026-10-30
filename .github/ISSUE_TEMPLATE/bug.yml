@@ -1,0 +1,21 @@
+name: 问题反馈
+description: 报告连接、传输或界面问题
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 版本与系统
+      placeholder: Nearlink 0.1.0 / macOS 15 / Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤、预期结果和实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: network
+    attributes:
+      label: 网络情况
+      description: 是否同一网络、自动发现或手动连接、是否出现防火墙提示。请勿上传私人聊天、SQLite 数据库或 identity.json。

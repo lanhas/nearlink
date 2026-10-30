@@ -1,0 +1,118 @@
+{
+  "name": "nearlink",
+  "version": "0.1.0",
+  "description": "邻线 Nearlink — local conversations, connected devices.",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "author": "lanhas",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "icons": "node --import tsx scripts/icons.ts",
+    "dist:mac": "npm run build && electron-builder --mac --arm64 --publish never",
+    "dist:win": "npm run build && electron-builder --win --x64 --publish never",
+    "dist:dir": "npm run build && electron-builder --dir --publish never",
+    "smoke": "node --import tsx scripts/smoke.ts",
+    "release": "node --import tsx scripts/release.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "selfsigned": "5.5.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0",
+    "electron-vite": "6.0.0",
+    "lucide-react": "^0.577.0",
+    "png-to-ico": "^3.0.1",
+    "prettier": "^3.9.10",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sharp": "^0.35.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "8.3.5"
+  },
+  "build": {
+    "appId": "io.nearlink.desktop",
+    "productName": "Nearlink",
+    "artifactName": "Nearlink-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "邻线需要在局域网内发现设备并传输消息与文件。"
+      },
+      "identity": "-"
+    },
+    "dmg": {
+      "title": "安装 Nearlink",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Nearlink 邻线",
+      "artifactName": "Nearlink-win-x64-setup.exe",
+      "include": "build/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "Nearlink-win-x64-portable.exe"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "lanhas",
+      "repo": "nearlink"
+    }
+  }
+}

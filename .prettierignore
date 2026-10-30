@@ -1,0 +1,8 @@
+node_modules
+out
+release
+.smoke
+.planning
+docs/assets
+build/icon.iconset
+package-lock.json

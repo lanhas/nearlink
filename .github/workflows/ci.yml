@@ -1,0 +1,36 @@
+name: Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run build
+      - run: npm test
+      - run: npm run smoke
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: smoke-${{ matrix.os }}
+          path: |
+            .smoke/**/electron.log
+            .smoke/**/result.json
+            .smoke/**/chat.png
+          include-hidden-files: true
+          retention-days: 7

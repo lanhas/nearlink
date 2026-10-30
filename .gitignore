@@ -1,0 +1,13 @@
+node_modules/
+out/
+release/
+test-results/
+playwright-report/
+.DS_Store
+*.log
+.planning/
+.smoke/
+.env
+.env.*
+!.env.example
+build/icon.iconset/
