@@ -123,7 +123,7 @@ test('group creation and any member can message every member', async () => {
   )
   assert.equal(c.store.messages(id)[0].senderId, b.profile.id)
   assert.deepEqual(a.store.conversation(id)?.members, b.store.conversation(id)?.members)
-  assert.throws(() => a.createGroup('bad', [b.profile.id]), /至少/)
+  assert.throws(() => a.createGroup('bad', []), /至少/)
 })
 
 test('rejects forged senders, group mutation and events from a new unintroduced device', async () => {
@@ -143,6 +143,14 @@ test('rejects forged senders, group mutation and events from a new unintroduced 
   const group = a.store.conversations().find((v) => v.kind === 'group')!
   const mutate = { type: 'conversation', id: randomUUID(), conversation: { ...group, title: 'altered' } }
   assert.equal((await raw(a, b, '/v1/events', mutate)).status, 400)
+})
+
+test('two devices can create a named group for a shared topic', async () => {
+  const id = a.createGroup('Mac 与 Windows', [b.profile.id])
+  await eventually(() => !!b.store.conversation(id), 'two-device group invitation')
+  await b.send(id, '两台设备也可以按主题分组。')
+  await eventually(() => a.store.messages(id).length === 1, 'two-device group reply')
+  assert.equal(a.store.conversation(id)?.members.length, 2)
 })
 
 test('offline outbox and device identity survive a full restart', async () => {

@@ -517,11 +517,11 @@ export class LanNode extends EventEmitter {
     title = z.string().trim().min(1).max(80).parse(title)
     const members = [...new Set([this.profile.id, ...peerIds])].sort()
     if (
-      members.length < 3 ||
+      members.length < 2 ||
       members.length > 64 ||
       members.some((id) => id !== this.profile.id && !this.store.peer(id))
     )
-      throw new Error('请选择至少两台其他设备，最多 64 个成员。')
+      throw new Error('请选择至少一台其他设备，最多 64 个成员。')
     const conversation: ConversationInfo = {
       id: `group:${randomUUID()}`,
       kind: 'group',

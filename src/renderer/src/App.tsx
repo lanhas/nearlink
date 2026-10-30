@@ -1618,8 +1618,8 @@ function GroupModal({
                 />
               </label>
             ))}
-            {state.peers.length < 2 && (
-              <p className="group-empty">群聊需要至少两台其他设备。请先在「设备」中连接它们。</p>
+            {state.peers.length < 1 && (
+              <p className="group-empty">选择至少一台其他设备即可创建群聊，请先在「设备」中连接。</p>
             )}
           </div>
         </div>
@@ -1631,7 +1631,7 @@ function GroupModal({
           <button
             className="primary-button"
             type="submit"
-            disabled={busy || !title.trim() || chosen.length < 2}
+            disabled={busy || !title.trim() || chosen.length < 1}
           >
             {busy ? (
               <Loading />
