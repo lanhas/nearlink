@@ -37,6 +37,16 @@ jobs:
       - run: npm run smoke
       - name: Package desktop application
         run: npx electron-builder ${{ matrix.args }} --publish never
+      - name: Test packaged macOS application
+        if: matrix.platform == 'mac'
+        shell: bash
+        run: NEARLINK_EXECUTABLE="$PWD/release/mac-arm64/Nearlink.app/Contents/MacOS/Nearlink" npm run smoke
+      - name: Test packaged Windows application
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $env:NEARLINK_EXECUTABLE = (Resolve-Path 'release/win-unpacked/Nearlink.exe').Path
+          npm run smoke
       - uses: actions/upload-artifact@v7
         with:
           name: nearlink-${{ matrix.platform }}

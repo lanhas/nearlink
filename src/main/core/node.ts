@@ -93,8 +93,8 @@ export class LanNode extends EventEmitter {
     this.identity = identity
     this.store = new Store(options.dataDir, {
       id: identity.id,
-      name: options.name || userInfo().username || '我',
-      deviceName: hostname(),
+      name: (options.name || userInfo().username || '我').trim().slice(0, 48) || '我',
+      deviceName: hostname().slice(0, 64) || '我的设备',
       status: '在附近，随时连接',
       color: COLORS[0],
       avatar: '',

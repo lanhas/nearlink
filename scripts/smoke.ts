@@ -174,14 +174,16 @@ try {
   await application.evaluate(
     async ({ clipboard, ClipboardItem }, png) => {
       const previous = await Promise.all(
-        (await clipboard.read()).map(
-          async (item) =>
-            new ClipboardItem(
-              Object.fromEntries(
-                await Promise.all(item.types.map(async (type) => [type, await item.getType(type)]))
+        (await clipboard.read())
+          .filter((item) => item.types.length > 0)
+          .map(
+            async (item) =>
+              new ClipboardItem(
+                Object.fromEntries(
+                  await Promise.all(item.types.map(async (type) => [type, await item.getType(type)]))
+                )
               )
-            )
-        )
+          )
       )
       ;(globalThis as unknown as { restoreClipboard: () => Promise<void> }).restoreClipboard = () =>
         previous.length ? clipboard.write(previous) : Promise.resolve(clipboard.clear())
