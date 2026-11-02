@@ -1,5 +1,16 @@
 // Helpers run outside the application being replaced. Paths are passed as data,
 // never interpolated into a command. They wait for the old app to close first.
+export function windowsHelperArguments(script = windowsHelper): string[] {
+  // PowerShell's documented UTF-16LE command transport preserves multiline
+  // source across Windows argument quoting. No execution policy is changed.
+  return [
+    '-NoProfile',
+    '-NonInteractive',
+    '-EncodedCommand',
+    Buffer.from(script, 'utf16le').toString('base64')
+  ]
+}
+
 export const macHelper = String.raw`#!/bin/sh
 set -u
 old_pid="$1"

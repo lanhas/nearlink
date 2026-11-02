@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { LanNode } from '../src/main/core/node'
 import sharp from 'sharp'
 import assert from 'node:assert/strict'
-import { windowsHelper } from '../src/main/updater/helpers'
+import { windowsHelperArguments } from '../src/main/updater/helpers'
 
 const require = createRequire(import.meta.url)
 await mkdir('.smoke', { recursive: true })
@@ -58,17 +58,13 @@ try {
         const fd = fs.openSync(log, 'a')
         const env = { ...process.env, NEARLINK_UPDATE_JOB_FILE: jobFile } as NodeJS.ProcessEnv
         delete env.ELECTRON_RUN_AS_NODE
-        const child = cp.spawn(
-          'powershell.exe',
-          ['-NoProfile', '-NonInteractive', '-Command', input.script],
-          {
-            env,
-            cwd: input.directory,
-            detached: true,
-            windowsHide: true,
-            stdio: ['ignore', fd, fd]
-          }
-        )
+        const child = cp.spawn('powershell.exe', input.args, {
+          env,
+          cwd: input.directory,
+          detached: true,
+          windowsHide: true,
+          stdio: ['ignore', fd, fd]
+        })
         fs.closeSync(fd)
         let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined
         let error: string | undefined
@@ -90,7 +86,7 @@ try {
           child.unref()
         }
       },
-      { directory: probe, script: windowsHelper }
+      { directory: probe, args: windowsHelperArguments() }
     )
     console.log('Windows helper preflight:', JSON.stringify(result))
     assert.equal(result.ready, true, JSON.stringify(result))

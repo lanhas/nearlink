@@ -5,7 +5,7 @@ import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { setTimeout as delay } from 'node:timers/promises'
 import { type DownloadedUpdate, verifyDownload } from './controller'
-import { macHelper, windowsHelper } from './helpers'
+import { macHelper, windowsHelper, windowsHelperArguments } from './helpers'
 
 const execute = promisify(execFile)
 
@@ -75,6 +75,7 @@ export async function prepareUpdate(
       })
       await writeFile(join(update.directory, 'helper.sh'), macHelper, { mode: 0o700 })
     } else {
+      await writeFile(join(update.directory, 'helper.ps1'), windowsHelper, { mode: 0o600 })
       if (update.target === 'win-x64-portable') {
         if (!options.portableExecutable) throw new Error('无法定位便携版应用。')
         job.target = await realpath(options.portableExecutable)
@@ -112,7 +113,7 @@ export async function prepareUpdate(
             job.directory,
             job.id
           ]
-        : ['-NoProfile', '-NonInteractive', '-Command', windowsHelper]
+        : windowsHelperArguments()
     const child = spawn(command, args, {
       cwd: update.directory,
       detached: true,
