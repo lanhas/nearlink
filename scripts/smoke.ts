@@ -57,17 +57,7 @@ try {
         const env = { ...process.env, NEARLINK_UPDATE_JOB_FILE: jobFile } as NodeJS.ProcessEnv
         delete env.ELECTRON_RUN_AS_NODE
         const variants = [
-          { label: 'data-directory', cwd: input.directory, detached: true, hide: true, pipe: false },
-          {
-            label: 'system-directory',
-            cwd: process.env.SystemRoot!,
-            detached: true,
-            hide: true,
-            pipe: false
-          },
-          { label: 'attached', cwd: input.directory, detached: false, hide: true, pipe: false },
-          { label: 'piped', cwd: input.directory, detached: true, hide: true, pipe: true },
-          { label: 'console', cwd: process.env.SystemRoot!, detached: false, hide: false, pipe: true }
+          { label: 'windows-helper', cwd: input.directory, detached: false, hide: true, pipe: false }
         ]
         const results: Record<string, unknown>[] = []
         for (const variant of variants) {

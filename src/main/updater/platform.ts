@@ -116,7 +116,9 @@ export async function prepareUpdate(
         : windowsHelperArguments()
     const child = spawn(command, args, {
       cwd: update.directory,
-      detached: true,
+      // DETACHED_PROCESS can make Windows PowerShell exit before execution.
+      // unref + file stdio lets the Windows helper outlive the GUI instead.
+      detached: job.mode === 'mac',
       windowsHide: true,
       stdio: ['ignore', fd, fd],
       env
