@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 import { LanNode } from '../src/main/core/node'
 import sharp from 'sharp'
 import assert from 'node:assert/strict'
+import { windowsHelper } from '../src/main/updater/helpers'
 
 const require = createRequire(import.meta.url)
 await mkdir('.smoke', { recursive: true })
@@ -40,6 +41,60 @@ try {
     'undefined'
   )
   console.log('PASS: sandboxed Electron window and production custom protocol')
+  if (process.platform === 'win32') {
+    const probe = join(directory, "helper probe's")
+    await mkdir(probe)
+    const result = await application.evaluate(
+      async (_electron, input) => {
+        const fs = process.getBuiltinModule('node:fs') as typeof import('node:fs')
+        const cp = process.getBuiltinModule('node:child_process') as typeof import('node:child_process')
+        const path = process.getBuiltinModule('node:path') as typeof import('node:path')
+        const jobFile = path.join(input.directory, 'job.json')
+        fs.writeFileSync(
+          jobFile,
+          JSON.stringify({ id: 'probe', directory: input.directory, pid: process.pid })
+        )
+        const log = path.join(input.directory, 'helper.log')
+        const fd = fs.openSync(log, 'a')
+        const env = { ...process.env, NEARLINK_UPDATE_JOB_FILE: jobFile } as NodeJS.ProcessEnv
+        delete env.ELECTRON_RUN_AS_NODE
+        const child = cp.spawn(
+          'powershell.exe',
+          ['-NoProfile', '-NonInteractive', '-Command', input.script],
+          {
+            env,
+            cwd: input.directory,
+            detached: true,
+            windowsHide: true,
+            stdio: ['ignore', fd, fd]
+          }
+        )
+        fs.closeSync(fd)
+        let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined
+        let error: string | undefined
+        child.on('exit', (code, signal) => {
+          exit = { code, signal }
+        })
+        child.on('error', (value) => {
+          error = value.message
+        })
+        try {
+          for (let i = 0; i < 250; i++) {
+            if (fs.existsSync(path.join(input.directory, 'helper-ready'))) return { ready: true }
+            if (exit || error) return { ready: false, exit, error, log: fs.readFileSync(log, 'utf8') }
+            await new Promise((resolve) => setTimeout(resolve, 20))
+          }
+          return { ready: false, timeout: true, log: fs.readFileSync(log, 'utf8') }
+        } finally {
+          child.kill()
+          child.unref()
+        }
+      },
+      { directory: probe, script: windowsHelper }
+    )
+    console.log('Windows helper preflight:', JSON.stringify(result))
+    assert.equal(result.ready, true, JSON.stringify(result))
+  }
   assert.equal(
     await application.evaluate(
       ({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('check-updates')?.label

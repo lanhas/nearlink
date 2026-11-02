@@ -122,15 +122,21 @@ export async function prepareUpdate(
     })
     closeSync(fd)
     let launchError: Error | undefined
-    let exited = false
+    let exited: { code: number | null; signal: NodeJS.Signals | null } | undefined
     child.on('error', (error) => {
       launchError = error
     })
-    child.on('exit', () => {
-      exited = true
+    child.on('exit', (code, signal) => {
+      exited = { code, signal }
     })
     for (let attempt = 0; attempt < 250; attempt++) {
-      if (launchError || exited) throw launchError || new Error('更新辅助程序无法启动，请查看更新日志。')
+      if (launchError || exited) {
+        await writeFile(
+          join(update.directory, 'helper-exit.json'),
+          JSON.stringify({ pid: child.pid, ...exited, error: launchError?.message })
+        )
+        throw launchError || new Error(`更新辅助程序无法启动（退出码 ${exited?.code}），请查看更新日志。`)
+      }
       try {
         await access(join(update.directory, 'helper-ready'))
         child.unref()
