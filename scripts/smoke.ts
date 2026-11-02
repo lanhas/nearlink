@@ -40,6 +40,12 @@ try {
     'undefined'
   )
   console.log('PASS: sandboxed Electron window and production custom protocol')
+  assert.equal(
+    await application.evaluate(
+      ({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('check-updates')?.label
+    ),
+    '检查更新…'
+  )
   await page.screenshot({ path: join(directory, 'empty.png') })
 
   await page.getByRole('button', { name: '个人资料', exact: true }).click()

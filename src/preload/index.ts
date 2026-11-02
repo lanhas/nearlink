@@ -2,6 +2,20 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { NearlinkAPI } from '../shared/types'
 
 const api: NearlinkAPI = {
+  updateState: () => ipcRenderer.invoke('nearlink:update-state'),
+  checkUpdate: () => ipcRenderer.invoke('nearlink:update-check'),
+  downloadUpdate: () => ipcRenderer.invoke('nearlink:update-download'),
+  cancelUpdate: () => ipcRenderer.invoke('nearlink:update-cancel'),
+  installUpdate: () => ipcRenderer.invoke('nearlink:update-install'),
+  onUpdate: (listener) => {
+    const handler = (_: unknown, state: Parameters<typeof listener>[0]): void => listener(state)
+    ipcRenderer.on('nearlink:update-state', handler)
+    return () => ipcRenderer.removeListener('nearlink:update-state', handler)
+  },
+  onOpenUpdates: (listener) => {
+    ipcRenderer.on('nearlink:open-updates', listener)
+    return () => ipcRenderer.removeListener('nearlink:open-updates', listener)
+  },
   snapshot: () => ipcRenderer.invoke('nearlink:snapshot'),
   messages: (id, before) => ipcRenderer.invoke('nearlink:messages', id, before),
   direct: (id) => ipcRenderer.invoke('nearlink:direct', id),

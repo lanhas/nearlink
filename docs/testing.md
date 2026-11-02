@@ -19,6 +19,12 @@
 
 使用 `NEARLINK_EXECUTABLE=/path/to/Nearlink.app/Contents/MacOS/Nearlink npm run smoke` 可测试已打包的 macOS 应用；Windows 指向解包后的 `Nearlink.exe`。
 
+`tests/updater.test.ts` 验证更新清单签名、官方地址限制、版本比较、请求合并、流式下载校验、取消、离线重试、跨启动缓存恢复和退出顺序，损坏的包不会触发安装。
+
+打包后执行 `npm run smoke:update`，以同一源码构建一个更高版本的隔离测试包，由本地服务器提供已签名的更新清单，实际下载、替换、重启，核对新版本、设备身份及 SQLite 聊天记录。macOS 额外模拟新版启动失败并验证旧版恢复；Windows 在一次性 CI runner 上分别验证 NSIS 安装版和便携版。测试目录包含空格和单引号，以覆盖路径传递。测试发布包不会上传到 GitHub。
+
+原生更新测试需要匹配内置公钥的 `NEARLINK_UPDATE_PRIVATE_KEY`；本地可从被 Git 忽略的 `.release-secrets/update-private-key.pem` 读取。密钥只用于测试清单签名，不传给测试应用。所有本地更新测试必须显式使用隔离数据目录；不覆盖真实用户安装。
+
 ## 验证边界
 
 测试节点运行在同一主机上的真实网络端点；这不等于已经在用户的实体 Mac、Windows、路由器和防火墙之间完成互通测试。Windows 原生构建和 GUI 测试由 GitHub Actions 的 Windows runner 执行，macOS 由 Mac runner 执行。

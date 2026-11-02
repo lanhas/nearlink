@@ -19,6 +19,7 @@ import {
   Moon,
   Paperclip,
   Plus,
+  RefreshCw,
   Search,
   Settings2,
   ShieldCheck,
@@ -36,13 +37,14 @@ import {
   type ProfileUpdate,
   type SearchResult,
   type Snapshot,
-  type Transfer
+  type Transfer,
+  type UpdateState
 } from '../../shared/types'
 import { Avatar, bytes, Empty, FileCard, FileIcon, Loading, Mark, Modal } from './components'
 
 const api = window.nearlink
 type View = 'chat' | 'devices' | 'transfers'
-type Popup = 'profile' | 'connect' | 'group' | 'search' | null
+type Popup = 'profile' | 'connect' | 'group' | 'search' | 'updates' | null
 const time = (date: number): string =>
   new Date(date).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 const day = (date: number): string => {
@@ -102,6 +104,8 @@ export default function App() {
     [showToast]
   )
   const close = useCallback(() => setPopup(null), [])
+
+  useEffect(() => api?.onOpenUpdates(() => setPopup('updates')), [])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
@@ -418,6 +422,17 @@ export default function App() {
             {activeTransfers.length > 0 && <i className="nav-dot" />}
           </button>
           <div className="rail-spacer" />
+          <button
+            className="rail-button subtle"
+            title="检查更新"
+            aria-label="检查更新"
+            onClick={() => {
+              setPopup('updates')
+              void api.checkUpdate().catch(fail)
+            }}
+          >
+            <RefreshCw size={18} />
+          </button>
           <button
             className="rail-button subtle"
             title={theme === 'light' ? '深色外观' : '浅色外观'}
@@ -1169,6 +1184,7 @@ export default function App() {
           }}
         />
       )}
+      {popup === 'updates' && <UpdateModal currentVersion={state.version} close={close} fail={fail} />}
       {popup === 'connect' && (
         <ConnectModal
           close={close}
@@ -1220,6 +1236,96 @@ export default function App() {
         </Modal>
       )}
     </div>
+  )
+}
+
+function UpdateModal({
+  currentVersion,
+  close,
+  fail
+}: {
+  currentVersion: string
+  close: () => void
+  fail: (error: unknown) => void
+}) {
+  const [state, setState] = useState<UpdateState>({
+    currentVersion,
+    status: 'idle',
+    progress: 0,
+    downloaded: false
+  })
+  useEffect(() => {
+    let live = true
+    const unsubscribe = api.onUpdate((next) => {
+      if (live) setState(next)
+    })
+    void api
+      .updateState()
+      .then((next) => {
+        if (live) setState(next)
+      })
+      .catch(fail)
+    return () => {
+      live = false
+      unsubscribe()
+    }
+  }, [fail])
+  const labels: Record<UpdateState['status'], string> = {
+    idle: '检查是否有新版本',
+    checking: '正在检查更新…',
+    latest: '当前已是最新版本',
+    available: '有新版本可用',
+    downloading: `正在下载更新 · ${state.progress}%`,
+    ready: '更新已下载',
+    installing: '正在准备重启…',
+    error: '更新未完成'
+  }
+  const busy = state.status === 'checking' || state.status === 'installing'
+  const canDownload = state.latestVersion && state.latestVersion !== state.currentVersion
+  return (
+    <Modal title="软件更新" onClose={close}>
+      <div className="update-content" role="status">
+        <p className="update-status">{labels[state.status]}</p>
+        <p>
+          当前版本 v{state.currentVersion}
+          {canDownload && <> · 新版本 v{state.latestVersion}</>}
+        </p>
+        {state.status === 'downloading' && (
+          <progress aria-label="更新下载进度" value={state.progress} max={100} />
+        )}
+        {state.error && <p className="update-error">{state.error}</p>}
+      </div>
+      <div className="modal-footer">
+        <button className="secondary-button" onClick={close} disabled={state.status === 'installing'}>
+          稍后
+        </button>
+        {state.status === 'downloading' ? (
+          <button className="secondary-button" onClick={() => void api.cancelUpdate().catch(fail)}>
+            取消下载
+          </button>
+        ) : state.downloaded ? (
+          <button
+            className="primary-button"
+            disabled={busy}
+            onClick={() => void api.installUpdate().catch(fail)}
+          >
+            {state.status === 'installing' ? <Loading /> : '重启并更新'}
+          </button>
+        ) : canDownload ? (
+          <button className="primary-button" onClick={() => void api.downloadUpdate().catch(fail)}>
+            下载更新
+          </button>
+        ) : (
+          <button
+            className="primary-button"
+            disabled={busy}
+            onClick={() => void api.checkUpdate().catch(fail)}
+          >
+            {busy ? <Loading /> : '检查更新'}
+          </button>
+        )}
+      </div>
+    </Modal>
   )
 }
 

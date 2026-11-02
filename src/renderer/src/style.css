@@ -6,23 +6,23 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --bg: #ffffff;
-  --panel: #ffffff;
-  --side: #f6f6f6;
-  --rail: #f6f6f6;
-  --line: #e5e5e5;
-  --text: #1a1c1f;
-  --muted: #858585;
-  --sub: #626262;
-  --hover: #ededed;
-  --active: #e6e6e6;
-  --accent: #1a1c1f;
-  --accent-hover: #35373a;
+  --bg: #fafaf8;
+  --panel: #fff;
+  --side: #f4f4f0;
+  --rail: #efefea;
+  --line: #e7e7df;
+  --text: #34372f;
+  --muted: #909188;
+  --sub: #73766c;
+  --hover: #edede6;
+  --active: #e7e9df;
+  --accent: #4c5e42;
+  --accent-hover: #62764f;
   --on-accent: #ffffff;
-  --focus: #339cff;
-  --soft: #f9f9f9;
-  --white: #ffffff;
-  --shadow: 0 18px 70px #0000001a;
+  --focus: #8a987b;
+  --soft: #f0f2e9;
+  --white: #fff;
+  --shadow: 0 18px 70px #262a221a;
 }
 * {
   box-sizing: border-box;
@@ -1905,21 +1905,21 @@ a {
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #181818;
-  --panel: #222222;
-  --side: #141414;
-  --rail: #141414;
-  --line: #2e2e2e;
-  --text: #ededed;
-  --muted: #8f8f8f;
-  --sub: #b5b5b5;
-  --hover: #242424;
-  --active: #2b2b2b;
-  --accent: #ededed;
-  --accent-hover: #d7d7d7;
-  --on-accent: #181818;
-  --soft: #202020;
-  --white: #222222;
+  --bg: #20221e;
+  --panel: #262922;
+  --side: #252720;
+  --rail: #292c24;
+  --line: #363a30;
+  --text: #dddcd3;
+  --muted: #858b79;
+  --sub: #b0b5a3;
+  --hover: #32362b;
+  --active: #3b4431;
+  --accent: #a3b889;
+  --accent-hover: #b4c99b;
+  --on-accent: #20271b;
+  --soft: #2c3126;
+  --white: #222;
   --shadow: 0 18px 70px #0005;
 }
 :root[data-theme='dark'] .composer {
@@ -2010,4 +2010,25 @@ a {
 .device-label {
   font-size: 10px;
   color: var(--muted);
+}
+.update-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--sub);
+}
+.update-status {
+  color: var(--text);
+  font-size: 16px;
+}
+.update-content progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+.update-error {
+  color: #ad6c53;
+  overflow-wrap: anywhere;
 }

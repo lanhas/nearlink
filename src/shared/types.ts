@@ -95,7 +95,23 @@ export interface ProfileUpdate {
   avatar: string
 }
 
+export interface UpdateState {
+  status: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'ready' | 'installing' | 'error'
+  currentVersion: string
+  latestVersion?: string
+  progress: number
+  downloaded: boolean
+  error?: string
+}
+
 export interface NearlinkAPI {
+  updateState(): Promise<UpdateState>
+  checkUpdate(): Promise<void>
+  downloadUpdate(): Promise<void>
+  cancelUpdate(): Promise<void>
+  installUpdate(): Promise<void>
+  onUpdate(listener: (state: UpdateState) => void): () => void
+  onOpenUpdates(listener: () => void): () => void
   snapshot(): Promise<Snapshot>
   messages(conversationId: string, before?: number): Promise<Message[]>
   direct(peerId: string): Promise<string>

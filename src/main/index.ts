@@ -14,7 +14,7 @@ import {
   Tray,
   type IpcMainInvokeEvent
 } from 'electron'
-import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { randomUUID } from 'node:crypto'
@@ -24,11 +24,21 @@ import { idSchema } from '../shared/validation'
 import { LanNode } from './core/node'
 import { mimeType } from './core/files'
 import type { WireMessage } from '../shared/validation'
+import { UpdateController } from './updater/controller'
+import { prepareUpdate } from './updater/platform'
+import type { UpdateTarget } from './updater/manifest'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const rendererRoot = resolve(here, '../renderer')
 if (process.env.NEARLINK_DATA_DIR) app.setPath('userData', resolve(process.env.NEARLINK_DATA_DIR))
 app.setName('Nearlink')
+if (
+  process.env.NEARLINK_UPDATE_TESTING === '1' &&
+  process.env.NEARLINK_DATA_DIR &&
+  /^\d{2,5}$/.test(process.env.NEARLINK_UPDATE_TEST_DEBUG_PORT || '')
+) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.NEARLINK_UPDATE_TEST_DEBUG_PORT)
+}
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'nearlink',
@@ -42,6 +52,7 @@ protocol.registerSchemesAsPrivileged([
 let window: BrowserWindow | null = null
 let node: LanNode | undefined
 let tray: Tray | undefined
+let updater: UpdateController
 let quitting = false
 let stopped = false
 let updateTimer: ReturnType<typeof setTimeout> | undefined
@@ -84,6 +95,12 @@ function showWindow(): void {
   window.focus()
 }
 
+function showUpdates(check = true): void {
+  showWindow()
+  window?.webContents.send('nearlink:open-updates')
+  if (check) void updater.check()
+}
+
 function trusted(event: IpcMainInvokeEvent): void {
   if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame)
     throw new Error('无效窗口。')
@@ -118,6 +135,56 @@ async function start(): Promise<void> {
     discovery: process.env.NEARLINK_NO_DISCOVERY !== '1'
   })
   await node.start()
+  const testing = process.env.NEARLINK_UPDATE_TESTING === '1' && Boolean(process.env.NEARLINK_DATA_DIR)
+  if (testing && process.env.NEARLINK_UPDATE_TEST_FAIL_VERSION === app.getVersion()) {
+    app.exit(1)
+    return
+  }
+  let releaseBase: string | undefined
+  if (testing && process.env.NEARLINK_UPDATE_TEST_FEED) {
+    const url = new URL(process.env.NEARLINK_UPDATE_TEST_FEED)
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.pathname !== '/releases')
+      throw new Error('无效的本地更新测试地址。')
+    releaseBase = url.href.replace(/\/$/, '')
+  }
+  const target: UpdateTarget | null = !(app.isPackaged || testing)
+    ? null
+    : process.platform === 'darwin' && process.arch === 'arm64'
+      ? 'mac-arm64'
+      : process.platform === 'win32' && process.arch === 'x64'
+        ? process.env.PORTABLE_EXECUTABLE_FILE
+          ? 'win-x64-portable'
+          : 'win-x64'
+        : null
+  updater = new UpdateController({
+    currentVersion: app.getVersion(),
+    target,
+    directory: join(app.getPath('userData'), 'updates'),
+    publicKey: await readFile(
+      app.isPackaged
+        ? join(process.resourcesPath, 'update-public-key.pem')
+        : resolve(here, '../../resources/update-public-key.pem'),
+      'utf8'
+    ),
+    fetch: (url, init) => net.fetch(url, init),
+    releaseBase,
+    prepare: (update) =>
+      prepareUpdate(update, {
+        executable: process.execPath,
+        portableExecutable: process.env.PORTABLE_EXECUTABLE_FILE,
+        pid: process.pid
+      }),
+    shutdown: async () => {
+      await node!.stop()
+      stopped = true
+      quitting = true
+    },
+    quit: () => app.quit()
+  })
+  updater.on('change', (state) => {
+    if (window && !window.isDestroyed()) window.webContents.send('nearlink:update-state', state)
+  })
+  await updater.restore()
   protocol.handle('nearlink', (request) => {
     const url = new URL(request.url)
     if (url.host !== 'app') return new Response('Not found', { status: 404 })
@@ -145,6 +212,7 @@ async function start(): Promise<void> {
               label: 'Nearlink',
               submenu: [
                 { role: 'about' as const },
+                { id: 'check-updates', label: '检查更新…', click: () => showUpdates() },
                 { type: 'separator' as const },
                 { role: 'hide' as const },
                 { role: 'quit' as const }
@@ -164,7 +232,15 @@ async function start(): Promise<void> {
           { role: 'selectAll' }
         ]
       },
-      { label: '窗口', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'togglefullscreen' }] }
+      { label: '窗口', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'togglefullscreen' }] },
+      ...(process.platform === 'darwin'
+        ? []
+        : [
+            {
+              label: '帮助',
+              submenu: [{ id: 'check-updates', label: '检查更新…', click: () => showUpdates() }]
+            }
+          ])
     ])
   )
   window = new BrowserWindow({
@@ -173,13 +249,13 @@ async function start(): Promise<void> {
     height: 900,
     minWidth: 920,
     minHeight: 640,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fafaf8',
     icon: iconPath,
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     trafficLightPosition: { x: 20, y: 20 },
     ...(process.platform === 'win32'
-      ? { titleBarOverlay: { color: '#f6f6f6', symbolColor: '#1a1c1f', height: 44 } }
+      ? { titleBarOverlay: { color: '#f4f4f0', symbolColor: '#565650', height: 44 } }
       : {}),
     webPreferences: {
       preload: join(here, '../preload/index.cjs'),
@@ -253,6 +329,7 @@ async function start(): Promise<void> {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: '打开邻线', click: showWindow },
+      { label: '检查更新…', click: () => showUpdates() },
       { type: 'separator' },
       { label: '退出邻线', click: () => app.quit() }
     ])
@@ -260,17 +337,28 @@ async function start(): Promise<void> {
   tray.on('click', showWindow)
   if (dev) await window.loadURL(dev)
   else await window.loadURL('nearlink://app/index.html')
+  const jobArgument = process.argv.find((arg) => arg.startsWith('--nearlink-update-job='))
+  if (jobArgument) await updater.markHealthy(jobArgument.split('=')[1], node.profile.id)
+  if (process.argv.includes('--nearlink-update-failed')) {
+    updater.reportError(new Error('更新未完成，已重新打开应用。请重试或查看更新日志。'))
+    setTimeout(() => showUpdates(false), 500)
+  }
 }
 
 function wireIPC(): void {
+  handle('update-state', () => updater.snapshot())
+  handle('update-check', () => updater.check())
+  handle('update-download', () => updater.download())
+  handle('update-cancel', () => updater.cancel())
+  handle('update-install', () => updater.install())
   handle('appearance', (value: string) => {
     const theme = z.enum(['light', 'dark']).parse(value)
     nativeTheme.themeSource = theme
-    window?.setBackgroundColor(theme === 'dark' ? '#181818' : '#ffffff')
+    window?.setBackgroundColor(theme === 'dark' ? '#20221e' : '#fafaf8')
     if (process.platform === 'win32')
       window?.setTitleBarOverlay({
-        color: theme === 'dark' ? '#141414' : '#f6f6f6',
-        symbolColor: theme === 'dark' ? '#ededed' : '#1a1c1f'
+        color: theme === 'dark' ? '#252720' : '#f4f4f0',
+        symbolColor: theme === 'dark' ? '#dddcd3' : '#565650'
       })
   })
   handle('snapshot', () => ({ ...node!.snapshot(), version: app.getVersion() }))
