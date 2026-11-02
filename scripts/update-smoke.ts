@@ -263,8 +263,9 @@ try {
     await runCase('mac')
     await runCase('mac', true)
   } else {
-    await runCase('nsis')
+    // Run before installer cleanup, which can terminate matching test copies.
     await runCase('portable')
+    await runCase('nsis')
   }
   await writeFile(join(directory, 'result.json'), JSON.stringify({ success: true, reports }, null, 2))
   console.log(`All native update checks passed: ${directory}`)
