@@ -6,7 +6,6 @@ import {
   ArrowUp,
   ArrowUpDown,
   Check,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   Clock3,
@@ -15,7 +14,6 @@ import {
   Hash,
   Info,
   Laptop,
-  LockKeyhole,
   MessageCircle,
   Monitor,
   Moon,
@@ -24,7 +22,6 @@ import {
   Search,
   Settings2,
   ShieldCheck,
-  Smartphone,
   Sun,
   Users,
   Wifi,
@@ -70,7 +67,7 @@ export default function App() {
   const [view, setView] = useState<View>('chat')
   const [messages, setMessages] = useState<Message[]>([])
   const [popup, setPopup] = useState<Popup>(null)
-  const [details, setDetails] = useState(true)
+  const [details, setDetails] = useState(false)
   const [toast, setToast] = useState('')
   const [drafts, setDrafts] = useState<Record<string, { text: string; files: DraftFile[] }>>({})
   const [sending, setSending] = useState('')
@@ -340,7 +337,7 @@ export default function App() {
     return (
       <div className="boot">
         <Mark size={48} />
-        <p>正在打开本地空间…</p>
+        <p>正在加载…</p>
         <Loading />
       </div>
     )
@@ -387,15 +384,6 @@ export default function App() {
           <strong>Nearlink</strong>
           <span className="titlebar-divider" />
           <span>邻线</span>
-        </div>
-        <div className="titlebar-center">
-          <span className="live-dot" />
-          本地空间
-          <ChevronDown size={11} />
-        </div>
-        <div className="titlebar-right">
-          <LockKeyhole size={11} />
-          私密，始于本地
         </div>
       </header>
       <div className={'workspace ' + (details && view === 'chat' ? 'with-details' : '')}>
@@ -449,12 +437,7 @@ export default function App() {
         </nav>
         <aside className="sidebar">
           <div className="workspace-name">
-            <div>
-              <span className="overline">YOUR LOCAL SPACE</span>
-              <h1>
-                在附近，就相连<span className="small-dot">.</span>
-              </h1>
-            </div>
+            <h1>会话</h1>
             <button
               className="icon-button"
               title="创建群聊"
@@ -470,17 +453,6 @@ export default function App() {
             <kbd>{api.platform === 'darwin' ? '⌘' : 'Ctrl'} K</kbd>
           </button>
           <div className="sidebar-scroll">
-            <div className="section-label">
-              <span>会话</span>
-              <button
-                className="icon-button"
-                title="新建群聊"
-                aria-label="新建群聊"
-                onClick={() => setPopup('group')}
-              >
-                <Plus size={13} />
-              </button>
-            </div>
             <div className="conversation-list">
               {[...state.conversations]
                 .sort((a, b) => (a.kind === 'self' ? -1 : b.kind === 'self' ? 1 : b.updatedAt - a.updatedAt))
@@ -546,24 +518,14 @@ export default function App() {
             {!state.peers.length && (
               <div className="sidebar-empty">
                 <Wifi size={19} />
-                <p>正在发现身边的设备</p>
-                <span>让其他设备也打开邻线</span>
+                <p>未发现设备</p>
+                <span>在同一局域网的其他设备上打开邻线</span>
               </div>
             )}
             <button className="add-device" onClick={() => setPopup('connect')}>
               <Plus size={14} />
               通过地址连接
             </button>
-          </div>
-          <div className="local-foot">
-            <span className="local-foot-icon">
-              <ShieldCheck size={17} />
-            </span>
-            <div>
-              <strong>只在你的设备之间</strong>
-              <span>无需账号 · 数据本地保存</span>
-            </div>
-            <span className="live-dot" />
           </div>
         </aside>
 
@@ -579,15 +541,10 @@ export default function App() {
                   <Avatar profile={self ? state.profile : directPeer} size={34} self={self} />
                 )}
                 <div>
-                  <h2>
-                    {conversation.title}
-                    {self && <span className="you-label">YOU</span>}
-                  </h2>
+                  <h2>{conversation.title}</h2>
                   <p>
                     {self ? (
-                      <>
-                        <LockKeyhole size={10} /> 此设备上的私密笔记
-                      </>
+                      '仅保存在本机'
                     ) : group ? (
                       <>
                         <Users size={11} /> {conversation.members.length} 位成员<span>·</span>
@@ -596,7 +553,7 @@ export default function App() {
                     ) : (
                       <>
                         <span className={'tiny-live-dot ' + (!directPeer?.online ? 'offline' : '')} />
-                        {directPeer?.online ? '在线，可以直接发送' : '离线，消息将在上线后送达'}
+                        {directPeer?.online ? '在线' : '离线'}
                       </>
                     )}
                   </p>
@@ -643,62 +600,11 @@ export default function App() {
                 </button>
               )}
               {!messages.length ? (
-                <div className="chat-welcome">
-                  <div className="welcome-mark">
-                    {self ? (
-                      <Mark size={48} />
-                    ) : group ? (
-                      <Hash size={44} />
-                    ) : (
-                      <Avatar profile={directPeer} size={68} />
-                    )}
-                  </div>
-                  <span className="overline">
-                    {self
-                      ? 'A LITTLE SPACE FOR YOURSELF'
-                      : group
-                        ? 'A SPACE TO STAY CONNECTED'
-                        : 'CLOSER THAN YOU THINK'}
-                  </span>
-                  <h2>
-                    {self
-                      ? '把想法，留在这里。'
-                      : group
-                        ? `欢迎来到 ${conversation.title}`
-                        : `和 ${conversation.title} 打个招呼。`}
-                  </h2>
-                  <p>
-                    {self
-                      ? '备忘、图片、灵感，或下一次想用到的文件。\n这是只属于这台设备的小空间。'
-                      : '文字、图片，或一份很大的文件。\n在同一片网络里，沟通可以很简单。'}
-                  </p>
-                  {!self && (
-                    <span className="welcome-note">
-                      <ShieldCheck size={12} />
-                      设备间加密传输，消息保存在本地
-                    </span>
-                  )}
-                  {self && (
-                    <button className="text-link" onClick={() => setView('devices')}>
-                      发现附近的设备 <ArrowRight size={14} />
-                    </button>
-                  )}
+                <div className="chat-empty">
+                  <p>暂无消息</p>
                 </div>
               ) : (
                 <>
-                  <div className="conversation-start">
-                    <span className="start-icon">
-                      {group ? <Hash size={23} /> : self ? <Mark size={25} /> : <MessageCircle size={23} />}
-                    </span>
-                    <h2>{conversation.title}</h2>
-                    <p>
-                      {self
-                        ? '一点灵感，一份文件。都留在本地。'
-                        : group
-                          ? '好想法，在这里汇合。'
-                          : '设备之间，直接相连。'}
-                    </p>
-                  </div>
                   {messages.map((message, index) => {
                     const previous = messages[index - 1]
                     const newDay = !previous || day(previous.createdAt) !== day(message.createdAt)
@@ -835,9 +741,7 @@ export default function App() {
                   maxLength={64000}
                   rows={2}
                   aria-label="消息"
-                  placeholder={
-                    self ? '记点什么，或把文件拖到这里…' : `发送到 ${group ? '# ' : ''}${conversation.title}…`
-                  }
+                  placeholder={self ? '输入消息…' : `发送到 ${group ? '# ' : ''}${conversation.title}…`}
                   onChange={(e) => updateDraft({ text: e.target.value })}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -870,9 +774,6 @@ export default function App() {
                     >
                       <Plus size={19} />
                     </button>
-                    <span className="composer-separator" />
-                    <Paperclip size={13} />
-                    <span className="composer-hint">文本、图片和任意大小的文件</span>
                   </div>
                   <button
                     className="send-button"
@@ -888,16 +789,7 @@ export default function App() {
                 </div>
               </div>
               <div className="composer-foot">
-                <span>
-                  {sending === selected ? (
-                    '正在读取并校验附件，请稍候…'
-                  ) : (
-                    <>
-                      <LockKeyhole size={10} />
-                      {self ? '仅保存在此设备' : '加密直连 · 无云端中转'}
-                    </>
-                  )}
-                </span>
+                {sending === selected && <span>正在准备附件…</span>}
                 <span>
                   <kbd>Enter</kbd> 发送<span className="foot-divider">·</span>
                   <kbd>Shift Enter</kbd> 换行
@@ -929,17 +821,11 @@ export default function App() {
                 <Avatar profile={self ? state.profile : directPeer} size={59} self={self} />
               )}
               <h3>{conversation.title}</h3>
-              <p>
-                {self
-                  ? '让灵感有个落脚的地方'
-                  : group
-                    ? `${conversation.members.length} 位成员 · 局域网群聊`
-                    : directPeer?.status || '在附近，随时连接'}
-              </p>
-              <span className="detail-badge">
-                <LockKeyhole size={10} />
-                {self ? '本地保存' : '设备间直连'}
-              </span>
+              {group ? (
+                <p>{conversation.members.length} 位成员</p>
+              ) : !self && directPeer?.status ? (
+                <p>{directPeer.status}</p>
+              ) : null}
             </div>
             {!self && (
               <div className="detail-section">
@@ -1015,7 +901,7 @@ export default function App() {
               {!shared.length && (
                 <div className="detail-empty">
                   <FolderOpen size={20} />
-                  <span>分享的文件会出现在这里</span>
+                  <span>暂无文件</span>
                 </div>
               )}
             </div>
@@ -1044,10 +930,6 @@ export default function App() {
                 <p>首次连接自动信任。可在两台设备上核对完整指纹。</p>
               </div>
             )}
-            <div className="details-bottom">
-              <Mark size={18} />
-              <span>离得近，聊得来。</span>
-            </div>
           </aside>
         )}
 
@@ -1064,15 +946,12 @@ export default function App() {
               </span>
             </div>
             <div className="page-content">
-              <span className="overline">YOUR LOCAL NETWORK</span>
-              <h2>身边的设备，就在这里。</h2>
-              <p className="page-lead">打开邻线，即可在同一网络内发现彼此。无需账号，也无需绕路。</p>
               <div className="this-device">
                 <div className="this-device-icon">
                   <Laptop size={25} />
                 </div>
                 <div>
-                  <span className="overline">THIS DEVICE</span>
+                  <span className="device-label">本机</span>
                   <h3>
                     {state.profile.deviceName}
                     <span>你</span>
@@ -1158,19 +1037,10 @@ export default function App() {
                 ))}
               </div>
               {!state.peers.length && (
-                <Empty icon={<Wifi size={32} />} title="等待第一台设备">
-                  在另一台设备上打开邻线，保持同一个 Wi-Fi 或有线网络。
-                  <br />
-                  也可以通过上方的连接地址手动连接。
+                <Empty icon={<Wifi size={32} />} title="未发现设备">
+                  在同一局域网的其他设备上打开邻线，或通过地址连接。
                 </Empty>
               )}
-              <div className="network-note">
-                <ShieldCheck size={18} />
-                <div>
-                  <strong>你的内容，只走你的网络。</strong>
-                  <p>设备自动发现，加密直接通信。消息和文件不会经过云端服务器。</p>
-                </div>
-              </div>
             </div>
           </main>
         )}
@@ -1193,9 +1063,6 @@ export default function App() {
               </button>
             </div>
             <div className="page-content">
-              <span className="overline">FROM ONE DEVICE TO ANOTHER</span>
-              <h2>每一次传输，都有着落。</h2>
-              <p className="page-lead">流式传输、断点续传，以及接收后的完整性校验。</p>
               <div className="transfer-stats">
                 <div>
                   <span>进行中</span>
@@ -1266,10 +1133,8 @@ export default function App() {
                   ))}
               </div>
               {!state.transfers.length && (
-                <Empty icon={<ArrowUpDown size={32} />} title="让文件，在设备间自由来往。">
-                  将文件拖进会话，或点击输入框的加号。
-                  <br />
-                  大文件也没关系，随时暂停，回来继续。
+                <Empty icon={<ArrowUpDown size={32} />} title="暂无传输记录">
+                  将文件拖入会话，或点击输入框的加号添加文件。
                 </Empty>
               )}
             </div>
@@ -1280,8 +1145,7 @@ export default function App() {
         <div className="drop-overlay">
           <div>
             <Paperclip size={38} />
-            <h2>松开，添加到这段对话</h2>
-            <p>图片、文档，或一份很大的文件</p>
+            <h2>松开以添加文件</h2>
           </div>
         </div>
       )}
@@ -1373,7 +1237,7 @@ function ProfileModal({
   const [profile, setProfile] = useState<ProfileUpdate>({ ...state.profile })
   const [busy, setBusy] = useState(false)
   return (
-    <Modal title="让彼此认出你" subtitle="资料只会与你连接的局域网设备共享。" onClose={close}>
+    <Modal title="个人资料" onClose={close}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -1404,7 +1268,6 @@ function ProfileModal({
           </button>
           <div>
             <strong>{profile.name || '你的名字'}</strong>
-            <p>一眼就能找到彼此。</p>
             <div className="color-choices">
               {COLORS.map((color) => (
                 <button
@@ -1439,13 +1302,12 @@ function ProfileModal({
             value={profile.deviceName}
             onChange={(e) => setProfile((p) => ({ ...p, deviceName: e.target.value }))}
           />
-          <small>例如「书房的 Windows」或「随行 MacBook」。</small>
         </label>
         <label className="field">
-          一句话介绍
+          简介
           <input
             maxLength={120}
-            placeholder="在附近，随时连接"
+            placeholder="选填"
             value={profile.status}
             onChange={(e) => setProfile((p) => ({ ...p, status: e.target.value }))}
           />
@@ -1464,10 +1326,6 @@ function ProfileModal({
           </button>
         </div>
         <div className="modal-footer">
-          <span>
-            <ShieldCheck size={13} />
-            无需注册或登录
-          </span>
           <button
             className="primary-button"
             disabled={busy || !profile.name.trim() || !profile.deviceName.trim()}
@@ -1492,7 +1350,7 @@ function ConnectModal({
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(false)
   return (
-    <Modal title="连接一台设备" subtitle="让另一台设备打开「设备」，复制它的本机连接地址。" onClose={close}>
+    <Modal title="连接设备" subtitle="在对方的「设备」页面复制连接地址。" onClose={close}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -1504,17 +1362,6 @@ function ConnectModal({
             .finally(() => setBusy(false))
         }}
       >
-        <div className="connect-illustration">
-          <span>
-            <Laptop size={31} />
-          </span>
-          <i />
-          <Mark size={23} />
-          <i />
-          <span>
-            <Monitor size={31} />
-          </span>
-        </div>
         <label className="field">
           对方的连接地址
           <input
@@ -1570,7 +1417,7 @@ function GroupModal({
   const [chosen, setChosen] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   return (
-    <Modal title="一起聊点什么" subtitle="给群聊起个名字，再选择要加入的设备。" onClose={close}>
+    <Modal title="创建群聊" onClose={close}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -1589,7 +1436,7 @@ function GroupModal({
             <input
               required
               maxLength={80}
-              placeholder="比如：我的设备，或设计工作台"
+              placeholder="输入群聊名称"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
@@ -1684,12 +1531,7 @@ function SearchModal({
     }
   }, [query, fail])
   return (
-    <Modal
-      title="找回一条消息"
-      subtitle="搜索此设备上保存的文本与文件名称。"
-      onClose={close}
-      className="search-modal"
-    >
+    <Modal title="搜索消息与文件" onClose={close} className="search-modal">
       <div className="search-field">
         <Search size={18} />
         <input
@@ -1724,13 +1566,9 @@ function SearchModal({
         ))}
         {!results.length && (
           <div className="search-empty">
-            {query.trim() ? (busy ? '正在搜索…' : '没有找到相关消息') : '每一条本地记录，都能再找到。'}
+            {query.trim() ? (busy ? '正在搜索…' : '没有找到相关消息') : '输入关键词搜索'}
           </div>
         )}
-      </div>
-      <div className="search-footer">
-        <LockKeyhole size={11} />
-        搜索在本地 SQLite 中完成
       </div>
     </Modal>
   )

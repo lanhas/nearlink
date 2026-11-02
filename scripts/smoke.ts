@@ -40,6 +40,7 @@ try {
     'undefined'
   )
   console.log('PASS: sandboxed Electron window and production custom protocol')
+  await page.screenshot({ path: join(directory, 'empty.png') })
 
   await page.getByRole('button', { name: '个人资料', exact: true }).click()
   await page.getByLabel('显示名称', { exact: true }).fill('小林')
@@ -60,7 +61,7 @@ try {
   const desktop = await page.evaluate(() => window.nearlink.snapshot())
   for (const [key, name, deviceName, color] of [
     ['windows', '书房工作站', '书房工作站', '#6c8d78'],
-    ['mini', '灵感收集站', 'Mac mini', '#6f86ad']
+    ['mini', 'Mac mini', 'Mac mini', '#6f86ad']
   ]) {
     const client = await LanNode.create({
       dataDir: join(directory, key),
@@ -71,7 +72,7 @@ try {
     })
     clients.push(client)
     await client.start()
-    await client.updateProfile({ ...client.profile, name, deviceName, color, status: '同一片网络，随时相连' })
+    await client.updateProfile({ ...client.profile, name, deviceName, color, status: '' })
     await client.connect(`127.0.0.1:${desktop.port}`)
   }
   await clients[0].connect(`127.0.0.1:${clients[1].port}`)
@@ -90,15 +91,15 @@ try {
   await expect(page.locator('.message-text').filter({ hasText: '文件整理好了' })).toBeVisible()
   console.log('PASS: real group creation and TLS fan-out across three independent profiles')
 
-  const image = join(directory, '午后的灵感.png')
+  const image = join(directory, '预览测试.png')
   await sharp(
     Buffer.from(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420"><rect width="960" height="420" fill="#e8e8dd"/><circle cx="731" cy="105" r="45" fill="#c8a17c"/><path d="M0 292Q140 156 310 238T680 235T960 257V420H0Z" fill="#b6bf9e"/><path d="M0 349Q170 217 390 309T750 286T960 342V420H0Z" fill="#7f9475"/><path d="M0 400Q200 305 407 371T760 346T960 370V420H0Z" fill="#4f6956"/><path d="M365 420Q410 360 488 334Q550 312 529 287Q507 267 557 247" fill="none" stroke="#e0d6ba" stroke-width="11"/><text x="38" y="47" font-family="sans-serif" font-size="13" letter-spacing="4" fill="#68705c">A LITTLE CLOSER.</text></svg>'
+      '<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420"><rect width="960" height="420" fill="#e8e8dd"/><circle cx="731" cy="105" r="45" fill="#c8a17c"/><path d="M0 292Q140 156 310 238T680 235T960 257V420H0Z" fill="#b6bf9e"/><path d="M0 349Q170 217 390 309T750 286T960 342V420H0Z" fill="#7f9475"/><path d="M0 400Q200 305 407 371T760 346T960 370V420H0Z" fill="#4f6956"/><path d="M365 420Q410 360 488 334Q550 312 529 287Q507 267 557 247" fill="none" stroke="#e0d6ba" stroke-width="11"/></svg>'
     )
   )
     .png()
     .toFile(image)
-  await clients[1].send(group.id, '今天的灵感，先放在这里。', [image])
+  await clients[1].send(group.id, '测试图片。', [image])
   await expect(page.locator('.image-preview img')).toBeVisible({ timeout: 15_000 })
   await page.locator('.image-preview').click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -107,7 +108,7 @@ try {
 
   const source = join(directory, '项目资料.bin')
   await writeFile(source, Buffer.alloc(8 * 1024 * 1024, 0x34))
-  await clients[0].send(group.id, '还有这份项目资料，随时取用。', [source])
+  await clients[0].send(group.id, '附件：项目资料.bin', [source])
   await page.getByRole('button', { name: '接收文件', exact: true }).click()
   await expect
     .poll(
@@ -118,9 +119,7 @@ try {
       { timeout: 15_000 }
     )
     .toBe('complete')
-  await page
-    .getByRole('textbox', { name: '消息', exact: true })
-    .fill('收到，图片和文件都到了。设备之间，直接相连。')
+  await page.getByRole('textbox', { name: '消息', exact: true }).fill('收到，图片和文件都到了。')
   await page.getByRole('button', { name: '发送消息', exact: true }).click()
   await expect(page.locator('.message-text').filter({ hasText: '收到，图片和文件都到了' })).toBeVisible()
   console.log('PASS: file receive controls, verified completion and outgoing text')

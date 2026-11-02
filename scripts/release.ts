@@ -9,6 +9,7 @@ if (pkg.name !== 'nearlink' || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(pkg.v
 if (output('git', ['branch', '--show-current']) !== 'main') throw new Error('Release from main.')
 if (output('git', ['status', '--porcelain'])) throw new Error('Commit all changes before releasing.')
 const tag = `v${pkg.version}`
+if (!readFileSync(`docs/releases/${tag}.md`, 'utf8').trim()) throw new Error('Release notes are empty.')
 if (output('git', ['tag', '--list', tag])) throw new Error(`${tag} already exists.`)
 const repo = output('gh', ['repo', 'view', '--json', 'nameWithOwner', '--jq', '.nameWithOwner'])
 if (repo !== 'lanhas/nearlink') throw new Error('Unexpected release repository.')

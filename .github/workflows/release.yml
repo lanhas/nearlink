@@ -85,4 +85,4 @@ jobs:
       - name: Publish release with both platforms
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --title "Nearlink $GITHUB_REF_NAME · 邻线" --notes-file docs/releases/v0.1.0.md
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --title "Nearlink $GITHUB_REF_NAME · 邻线" --notes-file "docs/releases/$GITHUB_REF_NAME.md"

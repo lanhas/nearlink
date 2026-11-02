@@ -173,13 +173,13 @@ async function start(): Promise<void> {
     height: 900,
     minWidth: 920,
     minHeight: 640,
-    backgroundColor: '#fafaf8',
+    backgroundColor: '#ffffff',
     icon: iconPath,
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     trafficLightPosition: { x: 20, y: 20 },
     ...(process.platform === 'win32'
-      ? { titleBarOverlay: { color: '#f4f4f0', symbolColor: '#565650', height: 44 } }
+      ? { titleBarOverlay: { color: '#f6f6f6', symbolColor: '#1a1c1f', height: 44 } }
       : {}),
     webPreferences: {
       preload: join(here, '../preload/index.cjs'),
@@ -266,11 +266,11 @@ function wireIPC(): void {
   handle('appearance', (value: string) => {
     const theme = z.enum(['light', 'dark']).parse(value)
     nativeTheme.themeSource = theme
-    window?.setBackgroundColor(theme === 'dark' ? '#20221e' : '#fafaf8')
+    window?.setBackgroundColor(theme === 'dark' ? '#181818' : '#ffffff')
     if (process.platform === 'win32')
       window?.setTitleBarOverlay({
-        color: theme === 'dark' ? '#252720' : '#f4f4f0',
-        symbolColor: theme === 'dark' ? '#dddcd3' : '#565650'
+        color: theme === 'dark' ? '#141414' : '#f6f6f6',
+        symbolColor: theme === 'dark' ? '#ededed' : '#1a1c1f'
       })
   })
   handle('snapshot', () => ({ ...node!.snapshot(), version: app.getVersion() }))

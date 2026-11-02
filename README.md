@@ -1,6 +1,5 @@
 <p align="center"><img src="resources/icon.png" width="88" alt="Nearlink icon" /></p>
 <h1 align="center">Nearlink · 邻线</h1>
-<p align="center">在附近，就相连。<br />A little closer. Entirely local.</p>
 <p align="center">无需账号的局域网聊天与文件传输，连接你的 Mac 和 Windows。</p>
 <p align="center">
   <a href="https://github.com/lanhas/nearlink/releases/latest"><img src="https://img.shields.io/github/v/release/lanhas/nearlink?style=flat-square&color=657950" alt="release" /></a>
@@ -35,13 +34,13 @@
 
 ## 功能
 
-- **会话如同工作空间**：私聊、群聊、仅本机可见的「随手记」、未读标记、消息送达状态、历史搜索。
+- **会话**：私聊、群聊、仅本机可见的「随手记」、未读标记、消息送达状态、历史搜索。
 - **任意文件与大文件**：按 4 MB 区间读取，流式写入磁盘，最多同时接收 3 个文件，不会把整个文件加载到内存。
-- **中断也能继续**：暂停或重启后保留 `.part` 文件，从已有偏移继续；接收完成后校验 SHA-256。
+- **断点续传**：暂停或重启后保留 `.part` 文件，从已有偏移继续；接收完成后校验 SHA-256。
 - **设备间加密直连**：TLS、自动生成的设备证书、指纹绑定、会话成员文件访问控制；不使用云端中转。
 - **本地 SQLite**：消息、会话、资料、离线队列与传输状态持久保存。离线消息会在对方重新连接后补发。
 - **个人资料**：自定义名称、设备名称、头像、头像颜色和简介。
-- **安静的桌面体验**：浅色/深色外观、系统通知、托盘驻留，关闭窗口后继续接收。
+- **桌面功能**：浅色/深色外观、系统通知、托盘驻留，关闭窗口后继续接收。
 
 <details><summary>设备界面与深色外观</summary>
 <img src="docs/assets/devices.png" alt="设备列表与手动连接" />

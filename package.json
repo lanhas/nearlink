@@ -1,7 +1,7 @@
 {
   "name": "nearlink",
-  "version": "0.1.0",
-  "description": "邻线 Nearlink — local conversations, connected devices.",
+  "version": "0.1.1",
+  "description": "邻线 Nearlink — 局域网聊天与文件传输",
   "private": true,
   "type": "module",
   "main": "./out/main/index.js",
