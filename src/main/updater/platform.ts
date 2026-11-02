@@ -5,7 +5,7 @@ import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { setTimeout as delay } from 'node:timers/promises'
 import { type DownloadedUpdate, verifyDownload } from './controller'
-import { macHelper, windowsHelper, windowsHelperArguments } from './helpers'
+import { macHelper, windowsHelper, windowsHelperArguments, windowsHelperPayload } from './helpers'
 
 const execute = promisify(execFile)
 
@@ -97,6 +97,7 @@ export async function prepareUpdate(
   return async () => {
     const fd = openSync(join(update.directory, 'helper.log'), 'a', 0o600)
     const env: NodeJS.ProcessEnv = { ...process.env, NEARLINK_UPDATE_JOB_FILE: jobFile }
+    if (job.mode !== 'mac') env.NEARLINK_UPDATE_HELPER_COMMAND = windowsHelperPayload()
     // Signing credentials are only used by the release/test process, never the app helper.
     delete env.NEARLINK_UPDATE_PRIVATE_KEY
     delete env.ELECTRON_RUN_AS_NODE
@@ -116,8 +117,7 @@ export async function prepareUpdate(
         : windowsHelperArguments()
     const child = spawn(command, args, {
       cwd: update.directory,
-      // DETACHED_PROCESS can make Windows PowerShell exit before execution.
-      // unref + file stdio lets the Windows helper outlive the GUI instead.
+      // The Windows launcher starts a helper outside libuv's parent-exit job.
       detached: job.mode === 'mac',
       windowsHide: true,
       stdio: ['ignore', fd, fd],

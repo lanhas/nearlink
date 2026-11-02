@@ -1,6 +1,10 @@
 // Helpers run outside the application being replaced. Paths are passed as data,
 // never interpolated into a command. They wait for the old app to close first.
-export function windowsHelperArguments(script = windowsHelper): string[] {
+export function windowsHelperPayload(): string {
+  return Buffer.from(windowsHelper, 'utf16le').toString('base64')
+}
+
+export function windowsHelperArguments(script = windowsBootstrap): string[] {
   // PowerShell's documented UTF-16LE command transport preserves multiline
   // source across Windows argument quoting. No execution policy is changed.
   return [
@@ -92,6 +96,7 @@ try {
     if ($installer.ExitCode -ne 0) { throw "Installer exited with code $($installer.ExitCode)." }
   }
   Remove-Item Env:NEARLINK_UPDATE_JOB_FILE -ErrorAction SilentlyContinue
+  Remove-Item Env:NEARLINK_UPDATE_HELPER_COMMAND -ErrorAction SilentlyContinue
   $started = Start-Process -FilePath $job.target -ArgumentList "--nearlink-update-job=$($job.id)" -PassThru
   Log-Update "Relaunched application $($started.Id)"
   for ($attempt = 0; !(Test-Path -LiteralPath (Join-Path $job.directory 'healthy.json')); $attempt++) {
@@ -114,4 +119,15 @@ try {
   if (Test-Path -LiteralPath $job.target) { Start-Process -FilePath $job.target -ArgumentList '--nearlink-update-failed' }
   exit 1
 }
+`
+
+// libuv assigns direct non-detached children to a kill-on-parent-exit job, but
+// permits their children to run independently (SILENT_BREAKAWAY_OK). The small
+// launcher runs PowerShell normally; its helper can then finish after GUI exit.
+const windowsBootstrap = String.raw`
+$ErrorActionPreference = 'Stop'
+$job = Get-Content -LiteralPath $env:NEARLINK_UPDATE_JOB_FILE -Raw -Encoding UTF8 | ConvertFrom-Json
+$helper = Start-Process -FilePath (Join-Path $PSHOME 'powershell.exe') -ArgumentList @('-NoProfile', '-NonInteractive', '-EncodedCommand', $env:NEARLINK_UPDATE_HELPER_COMMAND) -WindowStyle Hidden -PassThru
+[IO.File]::WriteAllText((Join-Path $job.directory 'bootstrap.json'), ('{"pid":' + $helper.Id + '}'))
+Wait-Process -Id $job.pid -Timeout 65 -ErrorAction SilentlyContinue
 `

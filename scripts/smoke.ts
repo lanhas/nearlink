@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { LanNode } from '../src/main/core/node'
 import sharp from 'sharp'
 import assert from 'node:assert/strict'
-import { windowsHelperArguments } from '../src/main/updater/helpers'
+import { windowsHelperArguments, windowsHelperPayload } from '../src/main/updater/helpers'
 
 const require = createRequire(import.meta.url)
 await mkdir('.smoke', { recursive: true })
@@ -54,7 +54,11 @@ try {
           jobFile,
           JSON.stringify({ id: 'probe', directory: input.directory, pid: process.pid })
         )
-        const env = { ...process.env, NEARLINK_UPDATE_JOB_FILE: jobFile } as NodeJS.ProcessEnv
+        const env = {
+          ...process.env,
+          NEARLINK_UPDATE_JOB_FILE: jobFile,
+          NEARLINK_UPDATE_HELPER_COMMAND: input.helperCommand
+        } as NodeJS.ProcessEnv
         delete env.ELECTRON_RUN_AS_NODE
         const variants = [
           { label: 'windows-helper', cwd: input.directory, detached: false, hide: true, pipe: false }
@@ -104,6 +108,12 @@ try {
               log: fs.readFileSync(log, 'utf8').slice(-2000)
             })
           } finally {
+            if (ready) {
+              const helper = JSON.parse(fs.readFileSync(readyFile, 'utf8')) as { pid: number }
+              try {
+                process.kill(helper.pid, 'SIGTERM')
+              } catch {}
+            }
             child.kill()
             child.unref()
             await new Promise((resolve) => setTimeout(resolve, 150))
@@ -111,7 +121,7 @@ try {
         }
         return { ready: results[0]?.ready, variants: results }
       },
-      { directory: probe, args: windowsHelperArguments() }
+      { directory: probe, args: windowsHelperArguments(), helperCommand: windowsHelperPayload() }
     )
     console.log('Windows helper preflight:', JSON.stringify(result))
     assert.equal(result.ready, true, JSON.stringify(result))
