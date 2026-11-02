@@ -54,37 +54,72 @@ try {
           jobFile,
           JSON.stringify({ id: 'probe', directory: input.directory, pid: process.pid })
         )
-        const log = path.join(input.directory, 'helper.log')
-        const fd = fs.openSync(log, 'a')
         const env = { ...process.env, NEARLINK_UPDATE_JOB_FILE: jobFile } as NodeJS.ProcessEnv
         delete env.ELECTRON_RUN_AS_NODE
-        const child = cp.spawn('powershell.exe', input.args, {
-          env,
-          cwd: input.directory,
-          detached: true,
-          windowsHide: true,
-          stdio: ['ignore', fd, fd]
-        })
-        fs.closeSync(fd)
-        let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined
-        let error: string | undefined
-        child.on('exit', (code, signal) => {
-          exit = { code, signal }
-        })
-        child.on('error', (value) => {
-          error = value.message
-        })
-        try {
-          for (let i = 0; i < 250; i++) {
-            if (fs.existsSync(path.join(input.directory, 'helper-ready'))) return { ready: true }
-            if (exit || error) return { ready: false, exit, error, log: fs.readFileSync(log, 'utf8') }
-            await new Promise((resolve) => setTimeout(resolve, 20))
+        const variants = [
+          { label: 'data-directory', cwd: input.directory, detached: true, hide: true, pipe: false },
+          {
+            label: 'system-directory',
+            cwd: process.env.SystemRoot!,
+            detached: true,
+            hide: true,
+            pipe: false
+          },
+          { label: 'attached', cwd: input.directory, detached: false, hide: true, pipe: false },
+          { label: 'piped', cwd: input.directory, detached: true, hide: true, pipe: true },
+          { label: 'console', cwd: process.env.SystemRoot!, detached: false, hide: false, pipe: true }
+        ]
+        const results: Record<string, unknown>[] = []
+        for (const variant of variants) {
+          const readyFile = path.join(input.directory, 'helper-ready')
+          fs.rmSync(readyFile, { force: true })
+          const log = path.join(input.directory, variant.label + '-helper.log')
+          const fd = fs.openSync(log, 'a')
+          const child = cp.spawn('powershell.exe', input.args, {
+            env,
+            cwd: variant.cwd,
+            detached: variant.detached,
+            windowsHide: variant.hide,
+            stdio: variant.pipe ? ['ignore', 'pipe', 'pipe'] : ['ignore', fd, fd]
+          })
+          fs.closeSync(fd)
+          let exit: { code: number | null; signal: NodeJS.Signals | null } | undefined
+          let error: string | undefined
+          let output = ''
+          child.stdout?.on('data', (value) => {
+            output += String(value)
+          })
+          child.stderr?.on('data', (value) => {
+            output += String(value)
+          })
+          child.on('exit', (code, signal) => {
+            exit = { code, signal }
+          })
+          child.on('error', (value) => {
+            error = value.message
+          })
+          let ready = false
+          try {
+            for (let i = 0; i < 250; i++) {
+              ready = fs.existsSync(readyFile)
+              if (ready || exit || error) break
+              await new Promise((resolve) => setTimeout(resolve, 20))
+            }
+            results.push({
+              label: variant.label,
+              ready,
+              exit,
+              error,
+              output: output.slice(-2000),
+              log: fs.readFileSync(log, 'utf8').slice(-2000)
+            })
+          } finally {
+            child.kill()
+            child.unref()
+            await new Promise((resolve) => setTimeout(resolve, 150))
           }
-          return { ready: false, timeout: true, log: fs.readFileSync(log, 'utf8') }
-        } finally {
-          child.kill()
-          child.unref()
         }
+        return { ready: results[0]?.ready, variants: results }
       },
       { directory: probe, args: windowsHelperArguments() }
     )
