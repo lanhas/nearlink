@@ -37,6 +37,7 @@ if (!process.env.NEARLINK_UPDATE_FIXTURE)
       ...(mac ? ['--mac', 'zip', '--arm64'] : ['--win', 'nsis', 'portable', '--x64']),
       '--publish',
       'never',
+      '-c.compression=store',
       `-c.extraMetadata.version=${nextVersion}`,
       `-c.directories.output=${fixture}`
     ],
@@ -104,6 +105,7 @@ async function waitFor<T>(fn: () => Promise<T>, timeout = 90_000): Promise<T> {
 }
 
 async function runCase(mode: 'mac' | 'nsis' | 'portable', rollback = false): Promise<void> {
+  console.log(`Starting native update case: ${mode}${rollback ? ' rollback' : ''}`)
   const run = join(directory, `${mode}${rollback ? '-rollback' : ''} path with spaces's`)
   const data = join(run, 'desktop')
   await mkdir(run, { recursive: true })
@@ -171,14 +173,16 @@ async function runCase(mode: 'mac' | 'nsis' | 'portable', rollback = false): Pro
       `PASS: ${mode}${rollback ? ' rollback' : ''} downloaded and verified real v${nextVersion} package`
     )
     await page.getByRole('button', { name: '重启并更新', exact: true }).click()
-    const result = await waitFor(
-      async () =>
-        JSON.parse(await readFile(join(jobDirectory, 'result.json'), 'utf8')) as {
-          status: string
-          pid?: number
-        },
-      150_000
-    )
+    const result = await waitFor(async (): Promise<{ status: string; pid?: number; error?: string }> => {
+      if (!page.isClosed()) {
+        const state = await page.evaluate(() => window.nearlink.updateState()).catch(() => null)
+        if (state?.status === 'error') return { status: 'controller-error', error: state.error }
+      }
+      return JSON.parse(await readFile(join(jobDirectory, 'result.json'), 'utf8')) as {
+        status: string
+        pid?: number
+      }
+    }, 150_000)
     assert.equal(result.status, rollback ? 'failed' : 'complete')
     if (result.pid) pid = result.pid
     else {
@@ -219,6 +223,18 @@ async function runCase(mode: 'mac' | 'nsis' | 'portable', rollback = false): Pro
     console.log(
       `PASS: ${mode}${rollback ? ' restored old version after failed startup' : ' replaced and restarted to new version'}; identity and SQLite history preserved`
     )
+  } catch (error) {
+    const debug: Record<string, unknown> = { error: String(error), mode, rollback, originalPid: child.pid }
+    if (browser?.isConnected()) {
+      const page = browser.contexts()[0]?.pages()[0]
+      if (page && !page.isClosed()) {
+        debug.state = await page.evaluate(() => window.nearlink.updateState()).catch(() => null)
+        await page.screenshot({ path: join(run, 'update-failed.png') }).catch(() => {})
+      }
+    }
+    await writeFile(join(run, 'result.json'), JSON.stringify(debug, null, 2))
+    console.log(JSON.stringify(debug))
+    throw error
   } finally {
     await browser?.close().catch(() => {})
     if (pid) {

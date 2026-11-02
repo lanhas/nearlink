@@ -53,6 +53,7 @@ jobs:
           $env:NEARLINK_EXECUTABLE = (Resolve-Path 'release/win-unpacked/Nearlink.exe').Path
           npm run smoke
       - name: Test real application update and restart
+        timeout-minutes: 12
         env:
           NEARLINK_UPDATE_PRIVATE_KEY: ${{ secrets.NEARLINK_UPDATE_PRIVATE_KEY }}
         run: npm run smoke:update
@@ -75,9 +76,13 @@ jobs:
             .smoke/**/chat.png
             .smoke/**/helper.log
             .smoke/**/helper-error.log
+            .smoke/**/helper-trace.log
+            .smoke/**/helper-ready
+            .smoke/**/updates/**/*.json
             .smoke/**/relaunch.log
             .smoke/**/launch.log
             .smoke/**/update-ready.png
+            .smoke/**/update-failed.png
           include-hidden-files: true
           retention-days: 7
   publish:

@@ -52,6 +52,9 @@ $ErrorActionPreference = 'Stop'
 $job = Get-Content -LiteralPath $env:NEARLINK_UPDATE_JOB_FILE -Raw -Encoding UTF8 | ConvertFrom-Json
 $moved = $false
 $started = $null
+function Log-Update($message) {
+  [IO.File]::AppendAllText((Join-Path $job.directory 'helper-trace.log'), ((Get-Date -Format o) + ' ' + $message + [Environment]::NewLine))
+}
 function Move-WithRetry($from, $to) {
   for ($attempt = 0; $attempt -lt 50; $attempt++) {
     try { Move-Item -LiteralPath $from -Destination $to -ErrorAction Stop; return }
@@ -59,27 +62,34 @@ function Move-WithRetry($from, $to) {
   }
 }
 try {
-  [IO.File]::WriteAllText((Join-Path $job.directory 'helper-ready'), 'ready')
+  Log-Update "Helper $PID started; waiting for application $($job.pid)"
+  [IO.File]::WriteAllText((Join-Path $job.directory 'helper-ready'), ('{"pid":' + $PID + '}'))
   for ($attempt = 0; Get-Process -Id $job.pid -ErrorAction SilentlyContinue; $attempt++) {
     if ($attempt -ge 300) { throw 'The running application did not exit.' }
     Start-Sleep -Milliseconds 200
   }
+  Log-Update 'Application exited'
   if ($job.mode -eq 'portable') {
     Move-WithRetry $job.target $job.backup
     $moved = $true
     Move-WithRetry $job.candidate $job.target
   } else {
-    $installer = Start-Process -FilePath $job.package -ArgumentList @('/S', '--updated') -Wait -PassThru
+    Log-Update 'Starting silent installer'
+    $installer = Start-Process -FilePath $job.package -ArgumentList @('/S', '--updated') -PassThru
+    if (!$installer.WaitForExit(180000)) { throw 'Installer did not finish in time.' }
+    Log-Update "Installer exited with code $($installer.ExitCode)"
     if ($installer.ExitCode -ne 0) { throw "Installer exited with code $($installer.ExitCode)." }
   }
   Remove-Item Env:NEARLINK_UPDATE_JOB_FILE -ErrorAction SilentlyContinue
   $started = Start-Process -FilePath $job.target -ArgumentList "--nearlink-update-job=$($job.id)" -PassThru
+  Log-Update "Relaunched application $($started.Id)"
   for ($attempt = 0; !(Test-Path -LiteralPath (Join-Path $job.directory 'healthy.json')); $attempt++) {
     if ($attempt -ge 225) { throw 'The updated application did not start.' }
     Start-Sleep -Milliseconds 200
     $started.Refresh()
   }
   [IO.File]::WriteAllText((Join-Path $job.directory 'result.json'), '{"status":"complete"}')
+  Log-Update 'Updated application is healthy'
   if ($moved) { Remove-Item -LiteralPath $job.backup -Force }
   Remove-Item -LiteralPath $job.package -Force
 } catch {
